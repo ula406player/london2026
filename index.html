@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>London Pro Guide</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --glass: rgba(255, 255, 255, 0.85);
+            --border: rgba(255, 255, 255, 1);
+            --accent: #2563eb;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg);
+            background-image: radial-gradient(at 0% 0%, hsla(217,100%,97%,1) 0, transparent 50%), 
+                              radial-gradient(at 50% 0%, hsla(225,100%,98%,1) 0, transparent 50%);
+            color: #1e293b;
+            margin: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body.no-scroll {
+            overflow: hidden;
+        }
+
+        .liquid-glass {
+            background: var(--glass);
+            backdrop-filter: blur(25px) saturate(200%);
+            -webkit-backdrop-filter: blur(25px) saturate(200%);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+        }
+
+        #context-menu {
+            position: fixed;
+            z-index: 1100;
+            width: 230px;
+            border-radius: 22px;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.9);
+            transform-origin: top right;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+        }
+
+        #context-menu.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        .liquid-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -45%) scale(0.95);
+            width: 92%;
+            max-width: 420px;
+            z-index: 1200;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 36px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .liquid-popup.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .image-carousel {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            gap: 0;
+            scrollbar-width: none;
+            background: #eee;
+            flex-shrink: 0;
+        }
+
+        .image-carousel::-webkit-scrollbar { display: none; }
+
+        .carousel-card {
+            scroll-snap-align: center;
+            flex: 0 0 100%;
+            height: 200px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .option-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+            cursor: pointer;
+            border-radius: 16px;
+        }
+
+        .option-item:active { background: rgba(0, 0, 0, 0.05); }
+
+        .day-label {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+        }
+
+        .card-active {
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .popup-scroll-area {
+            overflow-y: auto;
+            flex: 1;
+            padding: 0 4px;
+        }
+        
+        .popup-scroll-area::-webkit-scrollbar {
+            width: 4px;
+        }
+    </style>
+</head>
+<body class="pb-24">
+
+    <nav class="fixed top-0 w-full z-50 liquid-glass h-16 flex items-center px-6 justify-between border-b border-white/60">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-black rounded-xl flex items-center justify-center text-white font-bold text-xs shadow-md">L</div>
+            <span class="font-extrabold tracking-tight text-lg">LONDON <span class="text-blue-600">GUIDE</span></span>
+        </div>
+        <div class="text-[10px] font-black text-slate-500 bg-white/90 border border-slate-100 px-3 py-1 rounded-full uppercase">Gener 2026</div>
+    </nav>
+
+    <main class="pt-24 px-6 max-w-xl mx-auto" id="itinerari-container">
+        <!-- Contingut generat per JS -->
+    </main>
+
+    <div id="overlay" class="overlay" onclick="closeAll()"></div>
+
+    <!-- Menú Contextual -->
+    <div id="context-menu" class="liquid-glass p-2">
+        <div id="context-options" class="space-y-1"></div>
+    </div>
+
+    <!-- Popup Dinàmic -->
+    <div id="popup" class="liquid-popup liquid-glass p-5">
+        <div class="image-carousel mb-4 rounded-3xl overflow-hidden shadow-inner" id="carousel"></div>
+        
+        <div class="flex-1 flex flex-col min-h-0">
+            <div class="popup-scroll-area mb-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <span id="popup-tag" class="text-[9px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider">TAG</span>
+                    <h3 id="popup-title" class="text-xl font-extrabold tracking-tight"></h3>
+                </div>
+                <p id="popup-content" class="text-[14px] text-slate-500 leading-relaxed"></p>
+            </div>
+            
+            <div id="action-area" class="flex-shrink-0 space-y-2 pt-2 border-t border-slate-100/50">
+                <!-- Botons injectats per JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dades = [
+            {
+                dia: "MA 07", titol: "La City & Història",
+                items: [
+                    { 
+                        id: 1, nom: "Sky Garden", tipus: "FREE", 
+                        historis: "El jardí públic més alt de Londres al gratacel 'Walkie Talkie'. Ofereix una vista de 360º espectacular de la ciutat i el Tàmesi.",
+                        preu_detall: "L'entrada és totalment gratuïta, però és absolutament obligatori reservar amb unes 3 setmanes d'antelació. Els tiquets s'alliberen cada dilluns al matí.",
+                        reserva_url: "https://skygarden.london/booking/",
+                        btn_text: "Reserva entrada gratis",
+                        durada_detall: "Recomanem 1.5h. Imprescindible portar el codi QR de la reserva i DNI/Passaport.",
+                        preu_simple: "0€ (Reserva oblig.)", durada_simple: "1.5h", maps: "https://www.google.com/maps/search/?api=1&query=Sky+Garden+London", 
+                        imgs: ["https://images.unsplash.com/photo-1549488344-c672314fa1f8?w=800", "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800"] 
+                    },
+                    { 
+                        id: 2, nom: "Tower of London", tipus: "PAID", 
+                        historis: "Fortalesa històrica que ha servit com a palau, presó i armeria. Llar de les icòniques Joies de la Corona Britànica.",
+                        preu_detall: "Preu aprox. £34.80. Es recomana comprar online per evitar les llargues cues a taquilla.",
+                        reserva_url: "https://www.hrp.org.uk/tower-of-london/visit/tickets-and-prices/",
+                        btn_text: "Entrades oficials Tower",
+                        durada_detall: "Mínim 3 hores per veure les joies, la White Tower i fer el tour dels Beefeaters.",
+                        preu_simple: "£34.80", durada_simple: "3h", maps: "https://www.google.com/maps/search/?api=1&query=Tower+of+London", 
+                        imgs: ["https://images.unsplash.com/photo-1505761671935-60b3a7427bad?w=800"] 
+                    }
+                ]
+            },
+            {
+                dia: "ME 08", titol: "Cultura al Southbank",
+                items: [
+                    { 
+                        id: 4, nom: "British Museum", tipus: "FREE", 
+                        historis: "Un dels museus més grans del món, dedicat a la història, l'art i la cultura humana. Destaca la Pedra de Rosetta.",
+                        preu_detall: "L’entrada a la col·lecció permanent és gratuïta, però es recomana reservar un 'timed ticket' per assegurar l'entrada.",
+                        reserva_url: "https://ticketing.britishmuseum.org/overview/21397",
+                        btn_text: "Reserva entrada gratis",
+                        durada_detall: "3.5h. Planifica bé quines sales vols veure per no perdre't.",
+                        preu_simple: "0€ (Consell reserva)", durada_simple: "3.5h", maps: "https://www.google.com/maps/search/?api=1&query=British+Museum+London", 
+                        imgs: ["https://images.unsplash.com/photo-1518908336710-4e1cf821d3d1?w=800"] 
+                    },
+                    { 
+                        id: 5, nom: "Tate Modern", tipus: "FREE", 
+                        historis: "Museu nacional britànic d'art modern situat en una antiga central elèctrica. La Sala de Turbines és un espai monumental.",
+                        preu_detall: "Accés gratuït per a la col·lecció permanent. Les exposicions temporals solen ser de pagament i requereixen reserva.",
+                        reserva_url: "https://www.tate.org.uk/visit/tate-modern",
+                        btn_text: "Info i Reserves Tate",
+                        durada_detall: "2h. Puja al Blavatnik Building per vistes panoràmiques gratuïtes.",
+                        preu_simple: "0€", durada_simple: "2h", maps: "https://www.google.com/maps/search/?api=1&query=Tate+Modern+London", 
+                        imgs: ["https://images.unsplash.com/photo-1547823645-8025219430c5?w=800"] 
+                    }
+                ]
+            },
+            {
+                dia: "DJ 09", titol: "West End & Soho",
+                items: [
+                    { 
+                        id: 7, nom: "London Eye", tipus: "PAID", 
+                        historis: "La roda panoràmica més alta d'Europa a la vora del Tàmesi. Una experiència icònica de l'skyline londinenc.",
+                        preu_detall: "Entrades a partir de £35. Comprar online amb antelació sol incloure descomptes respecte a taquilla.",
+                        reserva_url: "https://www.londoneye.com/tickets-gttd/",
+                        btn_text: "Entrades oficials Eye",
+                        durada_detall: "La volta dura 30 minuts. Preveu 1 hora comptant cues i seguretat.",
+                        preu_simple: "£35", durada_simple: "1h", maps: "https://www.google.com/maps/search/?api=1&query=London+Eye", 
+                        imgs: ["https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800"] 
+                    },
+                    { 
+                        id: 8, nom: "Neal's Yard", tipus: "FREE", 
+                        historis: "Un carreró amagat a Covent Garden ple de colors vibrants, botigues orgàniques i cafeteries pintoresques.",
+                        preu_detall: "Espai públic totalment gratuït. No cal cap tipus d'entrada.",
+                        reserva_url: null,
+                        durada_detall: "30 minuts. Ideal per fer fotos i gaudir de l'estètica única d'aquest racó.",
+                        preu_simple: "0€ (Públic)", durada_simple: "30m", maps: "https://www.google.com/maps/search/?api=1&query=Neal%27s+Yard+Covent+Garden", 
+                        imgs: ["https://images.unsplash.com/photo-1520986606214-8b456906c813?w=800"] 
+                    }
+                ]
+            },
+            {
+                dia: "VI 10", titol: "Kensington & Parks",
+                items: [
+                    { 
+                        id: 9, nom: "Natural History Museum", tipus: "FREE", 
+                        historis: "Museu espectacular famós pel seu esquelet de balena blava al hall principal i la col·lecció de dinosaures.",
+                        preu_detall: "L'entrada general és gratuïta, però reservar amb antelació et permet evitar cues que poden ser de més d'una hora.",
+                        reserva_url: "https://www.nhm.ac.uk/visit.html",
+                        btn_text: "Reserva entrada gratis",
+                        durada_detall: "3h. L'edifici en si és una obra mestra de l'arquitectura victòria.",
+                        preu_simple: "0€ (Reserva recom.)", durada_simple: "3h", maps: "https://www.google.com/maps/search/?api=1&query=Natural+History+Museum+London", 
+                        imgs: ["https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800"] 
+                    }
+                ]
+            },
+            {
+                dia: "DS 11", titol: "Acomiadament",
+                items: [
+                    { 
+                        id: 11, nom: "Little Venice", tipus: "FREE", 
+                        historis: "Un barri de canals on el Grand Union Canal es troba amb el Regent's Canal. Pau i elegància Regency.",
+                        preu_detall: "Barri públic i gratuït. Pots passejar pels canals sense cost.",
+                        reserva_url: null,
+                        durada_detall: "1h. Passeja vora l'aigua fins a Regent's Park si vols fer un comiat relaxat.",
+                        preu_simple: "0€ (Lliure)", durada_simple: "1h", maps: "https://www.google.com/maps/search/?api=1&query=Little+Venice+London", 
+                        imgs: ["https://images.unsplash.com/photo-1533929736458-ca588d08c8be?w=800"] 
+                    }
+                ]
+            }
+        ];
+
+        function render() {
+            const container = document.getElementById('itinerari-container');
+            dades.forEach(dia => {
+                const sec = document.createElement('div');
+                sec.className = 'flex gap-5 mb-10 opacity-0 transform translate-y-4 transition-all duration-700';
+                sec.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <span class="day-label font-black text-slate-300 text-xl tracking-tighter">${dia.dia}</span>
+                        <div class="w-px flex-1 bg-slate-200 mt-3"></div>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-4">${dia.titol}</h2>
+                        <div class="space-y-3">
+                            ${dia.items.map(item => `
+                                <div class="liquid-glass p-5 rounded-[28px] flex justify-between items-center active:scale-[0.98] transition-transform cursor-pointer" 
+                                     onclick="handleMenu(event, ${item.id}, this)">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="w-1.5 h-1.5 rounded-full ${item.tipus === 'FREE' ? 'bg-green-500' : 'bg-blue-500'}"></div>
+                                            <h3 class="font-bold text-sm text-slate-800">${item.nom}</h3>
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 font-medium">${item.preu_simple} • ${item.durada_simple}</p>
+                                    </div>
+                                    <div class="p-2 text-slate-300">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(sec);
+                setTimeout(() => { sec.style.opacity = "1"; sec.style.transform = "translateY(0)"; }, 50);
+            });
+        }
+
+        let currentActiveId = null;
+        let currentActiveCard = null;
+
+        function handleMenu(e, id, element) {
+            e.stopPropagation();
+            currentActiveId = id;
+            currentActiveCard = element;
+            
+            document.querySelectorAll('.liquid-glass').forEach(c => c.classList.remove('card-active'));
+            element.classList.add('card-active');
+
+            const rect = element.getBoundingClientRect();
+            const menu = document.getElementById('context-menu');
+            
+            let topPos = rect.top;
+            if (topPos + 220 > window.innerHeight) {
+                topPos = window.innerHeight - 240;
+            }
+
+            menu.style.top = `${topPos}px`;
+            menu.style.left = `${Math.min(window.innerWidth - 250, rect.left + rect.width - 230)}px`;
+            
+            document.getElementById('context-options').innerHTML = `
+                <div onclick="openPopupContent(${id}, 'info')" class="option-item">
+                    <span class="text-blue-500">🏛️</span> <span class="text-xs font-bold">Història i Info</span>
+                </div>
+                <div onclick="openPopupContent(${id}, 'preu')" class="option-item">
+                    <span class="text-green-500">💰</span> <span class="text-xs font-bold">Entrades i Preus</span>
+                </div>
+                <div onclick="openPopupContent(${id}, 'durada')" class="option-item">
+                    <span class="text-orange-500">⏱️</span> <span class="text-xs font-bold">Consells i Temps</span>
+                </div>
+                <div onclick="openMaps(${id})" class="option-item border-t border-slate-100 mt-1 pt-3">
+                    <span class="text-slate-400">📍</span> <span class="text-xs font-bold">Google Maps</span>
+                </div>
+            `;
+            
+            document.getElementById('overlay').classList.add('active');
+            menu.classList.add('active');
+        }
+
+        function openPopupContent(id, mode) {
+            const item = dades.flatMap(d => d.items).find(i => i.id === id);
+            const popup = document.getElementById('popup');
+            const tag = document.getElementById('popup-tag');
+            const content = document.getElementById('popup-content');
+            const actionArea = document.getElementById('action-area');
+            
+            document.getElementById('popup-title').innerText = item.nom;
+            
+            if (mode === 'info') {
+                tag.innerText = "HISTÒRIA";
+                tag.className = "text-[9px] font-black uppercase px-2 py-0.5 bg-blue-100 text-blue-600 rounded-md tracking-wider";
+                content.innerText = item.historis;
+            } else if (mode === 'preu') {
+                tag.innerText = "ENTRADES";
+                tag.className = "text-[9px] font-black uppercase px-2 py-0.5 bg-green-100 text-green-600 rounded-md tracking-wider";
+                content.innerText = item.preu_detall;
+            } else if (mode === 'durada') {
+                tag.innerText = "PLANIFICACIÓ";
+                tag.className = "text-[9px] font-black uppercase px-2 py-0.5 bg-orange-100 text-orange-600 rounded-md tracking-wider";
+                content.innerText = item.durada_detall;
+            }
+
+            let buttonsHtml = "";
+            if (item.reserva_url && (mode === 'preu' || (item.tipus === 'FREE' && item.reserva_url))) {
+                buttonsHtml += `<a href="${item.reserva_url}" target="_blank" class="block w-full py-4 bg-blue-600 text-white text-center text-sm font-bold rounded-2xl shadow-lg active:scale-95 transition-transform">${item.btn_text || 'Anar a la web oficial'}</a>`;
+            }
+            buttonsHtml += `<button onclick="closePopupOnly()" class="w-full py-4 bg-black text-white text-sm font-bold rounded-2xl shadow-xl active:scale-95 transition-transform">D'acord</button>`;
+            actionArea.innerHTML = buttonsHtml;
+
+            const carousel = document.getElementById('carousel');
+            carousel.innerHTML = item.imgs.map(url => `<div class="carousel-card" style="background-image:url('${url}')"></div>`).join('');
+            
+            popup.classList.add('active');
+            document.body.classList.add('no-scroll');
+            document.querySelector('.popup-scroll-area').scrollTop = 0;
+        }
+
+        function openMaps(id) {
+            const item = dades.flatMap(d => d.items).find(i => i.id === id);
+            window.open(item.maps, '_blank');
+            closeAll();
+        }
+
+        function closePopupOnly() {
+            document.getElementById('popup').classList.remove('active');
+            document.body.classList.remove('no-scroll');
+        }
+
+        function closeAll() {
+            document.getElementById('context-menu').classList.remove('active');
+            document.getElementById('popup').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+            document.body.classList.remove('no-scroll');
+            if (currentActiveCard) currentActiveCard.classList.remove('card-active');
+        }
+
+        window.onload = render;
+    </script>
+</body>
+</html>
+
